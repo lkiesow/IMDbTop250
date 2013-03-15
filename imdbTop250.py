@@ -8,7 +8,6 @@ sys.setdefaultencoding('utf8')
 
 import getopt
 import imdb
-import pickle
 import os
 import textwrap
 import sqlite3
@@ -27,6 +26,7 @@ def usage():
 	opts = [
 			'--help, -h          -- Show this help',
 			'--download, -d      -- Fetch data from IMDb and exit',
+			'--db-download URL   -- Download DB from URL',
 			'--genre=VAL, -g VAL -- Show only films from this genre',
 			'--minyear=VAL       -- Show no films older than VAL',
 			'--maxyear=VAL       -- Show no films younger than VAL',
@@ -36,17 +36,6 @@ def usage():
 		]
 	print('Usage %s [options] [search]\n\nOPTIONS:\n  %s' % \
 			(sys.argv[0], '\n  '.join(opts)) )
-
-
-def getData():
-	try:
-		top250data = pickle.load(
-					open( os.path.expanduser('~/.imdbTop250data.p'), 'rb' ) )
-	except IOError:
-		download()
-		top250data = pickle.load(
-					open( os.path.expanduser('~/.imdbTop250data.p'), 'rb' ) )
-	return top250data
 
 
 def download():
@@ -183,64 +172,6 @@ def db_download( url ):
 			os.path.expanduser('~/.imdbTop250data.db') )
 
 
-def download_bak():
-	try:
-		ia = imdb.IMDb()
-		top250 = []
-		print( 'Downloading movie data…' )
-		for mov in ia.get_top250_movies():
-			url = 'http://imdb.com/title/tt%s/' % mov.movieID
-			rank = mov['top 250 rank']
-
-			m = None
-			tries = 0
-			while not m:
-				try:
-					m = ia.get_movie(mov.movieID)
-				except (IOError, imdb.IMDbDataAccessError) as e:
-					tries += 1
-					if tries > 3:
-						raise e
-					os.system('sleep 2')
-			genres = set(ia.get_movie(m.movieID)['genres'])
-			akas = {}
-			for a in m['akas']:
-				s = a.split('::')
-				if len(s) < 2:
-					continue
-				for lang in s[1].split(', '):
-					lang = lang.split(' (', 1)
-					country = lang[0]
-					type = lang[1].rstrip(')') if len(lang) > 1 else ''
-					if not country in akas.keys():
-						akas[country] = {}
-					akas[country][type] = s[0]
-			top250.append((
-					akas,
-					m.get('color info'),
-					m.get('countries'),
-					m.get('cover url'),
-					m.get('full-size cover url'),
-					genres,
-					m.get('languages'),
-					m.get('plot outline'),
-					m.get('plot'),
-					rank,
-					m.get('rating'),
-					m.get('title'),
-					url,
-					m.get('votes'),
-					m.get('year')
-				))
-			print 'Finished %3s/250%s' % (rank, _UPDATE_CHAR),
-			sys.stdout.flush()
-		print ''
-		pickle.dump( top250, 
-				open( os.path.expanduser('~/.imdbTop250data.p'), 'wb' ) )
-	except KeyboardInterrupt:
-		pass
-
-
 def listGenres():
 	with sqlite3.connect( os.path.expanduser('~/.imdbTop250data.db') ) as con:
 		cur = con.cursor()    
@@ -248,20 +179,6 @@ def listGenres():
 				from genres order by genre''')
 		for genre, in cur.fetchall():
 			print(genre)
-
-
-
-def listGenres_bak():
-	top250data = getData()
-	allGenres = set()
-	for akas, color_info, countries, cover_url, cover_url_fullsize, genres, \
-			lang, plot_outline, plot, rank, rating, title, url, votes, year in \
-			top250data:
-		for g in genres:
-			allGenres.add(g)
-	allGenres = list(allGenres)
-	allGenres.sort()
-	print ', '.join(allGenres)
 
 
 
@@ -331,46 +248,6 @@ def localSearch( search, genrefilter, minyear, maxyear ):
 			except IOError:
 				pass
 
-
-
-def localSearch_bak( search, genrefilter, minyear, maxyear ):
-	top250data = getData()
-	for akas, color_info, countries, cover_url, cover_url_fullsize, genres, \
-			lang, plot_outline, plot, rank, rating, title, url, votes, year in \
-			top250data:
-		if not genres >= genrefilter:
-			continue
-		if year < minyear or year > maxyear:
-			continue
-		title_aka = []
-		if 'Germany' in akas.keys():
-			title_aka.append( 'GER: “%s”' % akas['Germany'].values()[0] )
-		elif 'West Germany' in akas.keys():
-			title_aka.append( 'BRD: “%s”' % akas['West Germany'].values()[0] )
-		if 'UK' in akas.keys():
-			title_aka.append( ' UK: “%s”' % akas['UK'].values()[0] )
-		title_aka = '\n\t        '.join(title_aka)
-
-		if False in [ s.lower() in (title + title_aka).lower() for s in search ]:
-			continue
-		if title_aka:
-			title_aka = '\t%sAkas  :%s %s\n' % ( _COLOR_GRAY, _COLOR_END, title_aka )
-
-		try:
-			print( ('%3s: %s%s%s\n%s' \
-					+ '\t%sRating:%s %3s (Votes: %6s)\n' \
-					+ '\t%sYear  :%s %4s\n' \
-					+ '\t%sURL   :%s %s\n' \
-					+ '\t%sGenres:%s %s\n' \
-					+ '\t%s') % \
-					( rank, _COLOR_WHITE, title, _COLOR_END, title_aka, 
-						_COLOR_GRAY, _COLOR_END, rating, votes, 
-						_COLOR_GRAY, _COLOR_END, year,
-						_COLOR_GRAY, _COLOR_END, url,   
-						_COLOR_GRAY, _COLOR_END, ', '.join(genres), 
-						"\n\t".join(textwrap.wrap('  '+plot_outline, 80)) ))
-		except IOError:
-			pass
 
 
 def main(argv):                         
