@@ -1,0 +1,6 @@
+This python program grants basic search access to the IMDb Top 250 list of best
+movies. You can filter genres, search for titles, ...
+
+Requirements:
+  - IMDbPY
+  - SQLite
