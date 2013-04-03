@@ -202,7 +202,7 @@ def localSearch( search, genrefilter, minyear, maxyear ):
 		if not maxyear is None:
 			filter.append('year <= ? ')
 			filterval.append(maxyear)
-		filtersql = '' if not genrefilter else \
+		filtersql = '' if not filter else \
 				'%s where %s' % (join, ' and '.join(filter))
 
 		cur.execute('''select m.imdb_id, color_info, countries, cover_url,
