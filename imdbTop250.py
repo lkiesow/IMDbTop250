@@ -25,6 +25,7 @@ _UPDATE_CHAR  = '\n'
 def usage():
 	opts = [
 			'--help, -h          -- Show this help',
+			'--db-date           -- Show date of last database update and exit.',
 			'--download, -d      -- Fetch data from IMDb and exit',
 			'--db-download URL   -- Download DB from URL',
 			'--genre=VAL, -g VAL -- Show only films from this genre',
@@ -121,7 +122,9 @@ def download():
 						m.get('full-size cover url'), languages,
 						m.get('plot outline'), plot, rank, m.get('rating'),
 						m.get('title'), url, m.get('votes'), m.get('year') ))
-			print 'Finished %3s/250%s' % (rank, _UPDATE_CHAR),
+			print 'Finished [%-50s] %3s/250%s' % \
+					('#'*(rank/5), rank, _UPDATE_CHAR),
+
 			sys.stdout.flush()
 		print ''
 		import datetime
@@ -249,8 +252,15 @@ def localSearch( search, genrefilter, minyear, maxyear ):
 				pass
 
 
+def dbDate():
+	with sqlite3.connect( os.path.expanduser('~/.imdbTop250data.db') ) as con:
+		cur = con.cursor()
+		cur.execute('select val from config where key="date" ')
+		date, = cur.fetchone()
+		print 'Last database update: %s' % date
 
-def main(argv):                         
+
+def main(argv):
 	genres  = set()
 	minyear = None
 	maxyear = None
@@ -260,12 +270,15 @@ def main(argv):
 	try:                                
 		opts, args = getopt.getopt(argv, "hg:dlc", 
 				["help", "genre=", 'download', 'db-download=', 'minyear=',
-					'maxyear=', 'list-genres', 'cc']) 
+					'maxyear=', 'list-genres', 'cc', 'db-date']) 
 
 		for opt, arg in opts:
 			if opt in ("-h", "--help"):
 				action = 'usage'
 				break
+			if opt == '--db-date':
+				dbDate()
+				exit()
 			if opt in ('-g', '--genre'):
 				genres.add( arg )
 			if opt == '--maxyear':
