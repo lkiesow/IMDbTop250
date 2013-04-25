@@ -257,7 +257,7 @@ def dbDate():
 		cur = con.cursor()
 		cur.execute('select val from config where key="date" ')
 		date, = cur.fetchone()
-		print 'Last database update: %s' % date
+		print 'Last database update: %s%s%s' % (_COLOR_WHITE, date, _COLOR_END)
 
 
 def main(argv):
@@ -277,8 +277,8 @@ def main(argv):
 				action = 'usage'
 				break
 			if opt == '--db-date':
-				dbDate()
-				exit()
+				action = 'db-date'
+				break
 			if opt in ('-g', '--genre'):
 				genres.add( arg )
 			if opt == '--maxyear':
@@ -324,6 +324,8 @@ def main(argv):
 			localSearch( args, genres, minyear, maxyear )
 		elif action == 'download':
 			download()
+		elif action == 'db-date':
+			dbDate()
 		elif action == 'db-download':
 			db_download( dburl )
 		elif action == 'list-genres':
